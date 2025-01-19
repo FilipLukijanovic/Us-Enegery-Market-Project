@@ -1,0 +1,29 @@
+\begin{table}[!htbp] \centering
+  \caption{Regression of 1-Day and 3-Day Returns with Control Variables}
+\begin{tabular}{@{\extracolsep{5pt}}lcccc}
+\\[-1.8ex]\hline
+\hline \\[-1.8ex]
+& \multicolumn{4}{c}{\textit{Dependent variable: Return}} \
+\cr \cline{2-5}
+\\[-1.8ex] & \multicolumn{1}{c}{Green 1-Day} & \multicolumn{1}{c}{Green 3-Day} & \multicolumn{1}{c}{Brown 1-Day} & \multicolumn{1}{c}{Brown 3-Day}  \\
+\\[-1.8ex] & (1) & (2) & (3) & (4) \\
+\hline \\[-1.8ex]
+ Green_Volatility & 0.153$^{}$ & 0.263$^{}$ & -0.042$^{}$ & -0.282$^{}$ \\
+& (0.108) & (0.243) & (0.117) & (0.226) \\
+ Green_Volume & 0.005$^{}$ & -0.006$^{}$ & -0.017$^{***}$ & -0.008$^{}$ \\
+& (0.004) & (0.010) & (0.005) & (0.009) \\
+ Market_Return & 1.063$^{***}$ & 1.300$^{***}$ & 0.517$^{***}$ & 0.378$^{*}$ \\
+& (0.096) & (0.216) & (0.105) & (0.200) \\
+ const & -0.001$^{}$ & -0.000$^{}$ & 0.005$^{}$ & 0.014$^{**}$ \\
+& (0.003) & (0.006) & (0.003) & (0.006) \\
+\hline \\[-1.8ex]
+ Observations & 165 & 163 & 165 & 163 \\
+ $R^2$ & 0.454 & 0.207 & 0.197 & 0.037 \\
+ Adjusted $R^2$ & 0.444 & 0.192 & 0.182 & 0.019 \\
+ Residual Std. Error & 0.018 & 0.041 & 0.020 & 0.038 \\
+ F Statistic & 44.648$^{***}$ & 13.805$^{***}$ & 13.192$^{***}$ & 2.059$^{}$ \\
+\hline
+\hline \\[-1.8ex]
+\textit{Note:} & \multicolumn{4}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\
+\end{tabular}
+\end{table}

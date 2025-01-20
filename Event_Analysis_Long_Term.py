@@ -2,21 +2,22 @@ import pandas as pd
 import statsmodels.api as sm
 import yfinance as yf
 import os
-import numpy as np
 import matplotlib.pyplot as plt
 from stargazer.stargazer import Stargazer
 
 # Define tickers and event dates
 green_tickers = ["NEE", "BEP", "IBDRY", "ENPH", "SEDG"]
 brown_tickers = ["XOM", "CVX", "COP", "PSX", "MPC"]
-event_dates = {"Brown Event": "2022-07-14", "Green Event": "2022-07-27"}
-event_dates = {k: pd.to_datetime(v) for k, v in event_dates.items()}
+event_dates = {
+    "Brown Event": pd.to_datetime("2022-07-14"),
+    "Green Event": pd.to_datetime("2022-07-27")
+}
 
 # Download stock data (Close prices only)
-green_data = yf.download(green_tickers, start="2022-01-01", end="2022-08-31")["Close"]
-brown_data = yf.download(brown_tickers, start="2022-01-01", end="2022-08-31")["Close"]
+green_data = yf.download(green_tickers, start="2022-01-01", end="2022-10-31")["Close"]
+brown_data = yf.download(brown_tickers, start="2022-01-01", end="2022-10-31")["Close"]
 
-# Function to calculate event window returns (1-day and 3-day windows)
+# Function to calculate event window returns
 def calculate_event_returns(data, event_dates, window):
     event_returns = []
     for event_name, event_date in event_dates.items():
@@ -33,13 +34,13 @@ def calculate_event_returns(data, event_dates, window):
 
     return pd.DataFrame(event_returns, columns=['Date', 'Event', 'Ticker', 'Return'])
 
-# Calculate 1-day and 3-day event returns for green and brown firms
-green_returns_1d = calculate_event_returns(green_data, event_dates, window=1)
-green_returns_3d = calculate_event_returns(green_data, event_dates, window=3)
-brown_returns_1d = calculate_event_returns(brown_data, event_dates, window=1)
-brown_returns_3d = calculate_event_returns(brown_data, event_dates, window=3)
+# Calculate 30-day and 60-day event returns for both Green and Brown firms
+green_returns_30d = calculate_event_returns(green_data, event_dates, window=30)
+green_returns_60d = calculate_event_returns(green_data, event_dates, window=60)
+brown_returns_30d = calculate_event_returns(brown_data, event_dates, window=30)
+brown_returns_60d = calculate_event_returns(brown_data, event_dates, window=60)
 
-# Function to prepare regression data
+# Function to prepare regression data with Green and Brown event indicators
 def prepare_regression_data(green_returns, brown_returns):
     df_green = green_returns.copy()
     df_brown = brown_returns.copy()
@@ -52,11 +53,11 @@ def prepare_regression_data(green_returns, brown_returns):
 
     return df_green[['Return', 'Green_Event', 'Brown_Event']], df_brown[['Return', 'Green_Event', 'Brown_Event']]
 
-# Prepare regression data for each case separately
-green_1d_data, brown_1d_data = prepare_regression_data(green_returns_1d, brown_returns_1d)
-green_3d_data, brown_3d_data = prepare_regression_data(green_returns_3d, brown_returns_3d)
+# Prepare regression data for all scenarios
+green_30d_data, brown_30d_data = prepare_regression_data(green_returns_30d, brown_returns_30d)
+green_60d_data, brown_60d_data = prepare_regression_data(green_returns_60d, brown_returns_60d)
 
-# Run regression analysis for Green and Brown events as independent variables
+# Run regression analysis with both events as independent variables
 def run_regression(df):
     X = df[['Green_Event', 'Brown_Event']]
     X = sm.add_constant(X)
@@ -66,25 +67,26 @@ def run_regression(df):
     model = sm.OLS(y, X).fit()
     return model
 
-# Run regressions for green and brown firms separately
-green_1d_model = run_regression(green_1d_data)
-green_3d_model = run_regression(green_3d_data)
-brown_1d_model = run_regression(brown_1d_data)
-brown_3d_model = run_regression(brown_3d_data)
+# Run regressions for green and brown firms separately for 30-day and 60-day returns
+green_30d_model = run_regression(green_30d_data)
+green_60d_model = run_regression(green_60d_data)
+brown_30d_model = run_regression(brown_30d_data)
+brown_60d_model = run_regression(brown_60d_data)
 
 # Print regression summaries
-print("Green Firms - 1 Day Return:\n", green_1d_model.summary())
-print("Green Firms - 3 Day Return:\n", green_3d_model.summary())
-print("Brown Firms - 1 Day Return:\n", brown_1d_model.summary())
-print("Brown Firms - 3 Day Return:\n", brown_3d_model.summary())
+print("Green Firms - 30 Day Return:\n", green_30d_model.summary())
+print("Green Firms - 60 Day Return:\n", green_60d_model.summary())
+print("Brown Firms - 30 Day Return:\n", brown_30d_model.summary())
+print("Brown Firms - 60 Day Return:\n", brown_60d_model.summary())
 
 # Create results folder and save LaTeX table
 output_folder = "Results"
 os.makedirs(output_folder, exist_ok=True)
 
-stargazer = Stargazer([green_1d_model, green_3d_model, brown_1d_model, brown_3d_model])
-stargazer.title("Short-Term Impact of the IRA")
-stargazer.custom_columns(["Green 1-Day", "Green 3-Day", "Brown 1-Day", "Brown 3-Day"], [1, 1, 1, 1])
+# Stargazer table for regression results
+stargazer = Stargazer([green_30d_model, green_60d_model, brown_30d_model, brown_60d_model])
+stargazer.title("Long-Term Impact of the IRA")
+stargazer.custom_columns(["Green 30-Day", "Green 60-Day", "Brown 30-Day", "Brown 60-Day"], [1, 1, 1, 1])
 stargazer.significant_digits(3)
 stargazer.covariate_order(['const', 'Green_Event', 'Brown_Event'])
 stargazer.add_line("Event Dates", ["2022-07-27", "2022-07-27", "2022-07-14", "2022-07-14"])
@@ -95,30 +97,35 @@ stargazer.show_f_statistic = True
 
 # Save LaTeX table
 latex_output = stargazer.render_latex()
-output_file_path = os.path.join(output_folder, "Short_Term_Event_Analysis.tex")
+output_file_path = os.path.join(output_folder, "Long_Term_Event_Analysis.tex")
 
 with open(output_file_path, "w") as file:
     file.write(latex_output)
 
 print(f"LaTeX table saved in '{output_file_path}'.")
 
-# Function to plot combined cumulative percentage returns for green and brown firms
+# Function to plot cumulative percentage returns with both events included
 def plot_combined_closing_returns(green_data, brown_data, title, event_dates, filename):
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(14, 8))
 
-    green_filtered = green_data.loc["2022-07-01":"2022-08-01"]
-    brown_filtered = brown_data.loc["2022-07-01":"2022-08-01"]
+    # Define analysis period (July 1st to 60 days after the Green Event)
+    analysis_start = "2022-07-01"
+    analysis_end = "2022-09-25"
+
+    green_filtered = green_data.loc[analysis_start:analysis_end]
+    brown_filtered = brown_data.loc[analysis_start:analysis_end]
 
     green_pct_returns = green_filtered.pct_change().dropna().cumsum() * 100
     brown_pct_returns = brown_filtered.pct_change().dropna().cumsum() * 100
 
+    # Plot cumulative average returns for Green and Brown firms
     green_pct_returns.mean(axis=1).plot(label='Green Firms', color='green')
     brown_pct_returns.mean(axis=1).plot(label='Brown Firms', color='brown')
 
+    # Add vertical lines for event dates
     for event_name, event_date in event_dates.items():
-        if event_date in green_pct_returns.index:
-            plt.axvline(event_date, linestyle='--', label=f'{event_name}',
-                        color='brown' if 'Brown' in event_name else 'green')
+        plt.axvline(event_date, linestyle='--', label=event_name, 
+                    color='green' if 'Green' in event_name else 'brown')
 
     plt.title(title)
     plt.xlabel("Date")
@@ -126,7 +133,6 @@ def plot_combined_closing_returns(green_data, brown_data, title, event_dates, fi
     plt.legend()
     plt.grid()
 
-    os.makedirs(output_folder, exist_ok=True)
     output_file = os.path.join(output_folder, filename)
     plt.savefig(output_file, dpi=300)
     print(f"Plot saved to {output_file}")
@@ -135,7 +141,7 @@ def plot_combined_closing_returns(green_data, brown_data, title, event_dates, fi
 plot_combined_closing_returns(
     green_data, 
     brown_data, 
-    "Short-Term Cumulative % Return of Green and Brown Firms", 
+    "Long-Term Cumulative % Return of Green and Brown Firms", 
     event_dates, 
-    "Short Term Returns.png"
+    "Long Term Returns.png"
 )
